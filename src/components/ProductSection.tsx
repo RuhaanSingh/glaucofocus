@@ -179,16 +179,13 @@ const Product = () => {
               </ul>
               
               <div className="glass-card p-6 mt-8">
-                <h4 className="text-sm font-medium mb-3 text-foreground/90">Demo Video</h4>
+                <h4 className="text-sm font-medium mb-3 text-foreground/90">Demo Interface</h4>
                 <div className="aspect-video bg-black/30 rounded overflow-hidden">
-                  <video 
+                  <img 
+                    src="/lovable-uploads/7051b575-6146-4863-a834-d58ea144655f.png" 
+                    alt="GlaucoGuard Interface" 
                     className="w-full h-full object-cover" 
-                    controls 
-                    poster="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-                  >
-                    <source src="https://assets.mixkit.co/videos/preview/mixkit-medical-technology-interface-for-heart-analysis-10622-large.mp4" type="video/mp4" />
-                    Your browser does not support HTML5 video.
-                  </video>
+                  />
                 </div>
               </div>
               
