@@ -1,3 +1,4 @@
+
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { cn } from '@/lib/utils';
 
@@ -153,12 +154,12 @@ const Mission = () => {
                   />
                   <VisionStage 
                     title="Early Glaucoma" 
-                    imageUrl="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80" 
+                    imageUrl="/lovable-uploads/31fcf7d0-b765-43db-8e89-16018238e5ca.png" 
                     type="early"
                   />
                   <VisionStage 
                     title="Advanced Glaucoma" 
-                    imageUrl="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80" 
+                    imageUrl="/lovable-uploads/2a78a621-8f96-4f1c-93c6-808909904c74.png" 
                     type="advanced"
                   />
                 </div>
