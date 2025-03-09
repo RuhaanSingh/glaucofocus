@@ -1,4 +1,3 @@
-
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { cn } from '@/lib/utils';
 
@@ -197,7 +196,7 @@ const Product = () => {
                 <h4 className="text-sm font-medium mb-3 text-foreground/90">Analysis Image</h4>
                 <div className="aspect-square bg-black/30 rounded overflow-hidden">
                   <img 
-                    src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" 
+                    src="/lovable-uploads/12d0e3f2-d122-49a5-9818-c8797d350b8b.png" 
                     alt="Glaucoma Analysis" 
                     className="w-full h-full object-cover"
                   />

@@ -1,4 +1,3 @@
-
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver';
 import { cn } from '@/lib/utils';
 
@@ -149,7 +148,7 @@ const Mission = () => {
                 <div className="flex justify-between gap-6">
                   <VisionStage 
                     title="Normal Vision" 
-                    imageUrl="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80" 
+                    imageUrl="/lovable-uploads/12d0e3f2-d122-49a5-9818-c8797d350b8b.png" 
                     type="normal"
                   />
                   <VisionStage 
