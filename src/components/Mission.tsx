@@ -149,17 +149,17 @@ const Mission = () => {
                 <div className="flex justify-between gap-6">
                   <VisionStage 
                     title="Normal Vision" 
-                    imageUrl="/placeholder.svg" 
+                    imageUrl="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80" 
                     type="normal"
                   />
                   <VisionStage 
                     title="Early Glaucoma" 
-                    imageUrl="/placeholder.svg" 
+                    imageUrl="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80" 
                     type="early"
                   />
                   <VisionStage 
                     title="Advanced Glaucoma" 
-                    imageUrl="/placeholder.svg" 
+                    imageUrl="https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80" 
                     type="advanced"
                   />
                 </div>

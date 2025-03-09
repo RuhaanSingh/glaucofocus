@@ -180,14 +180,27 @@ const Product = () => {
               </ul>
               
               <div className="glass-card p-6 mt-8">
-                <div className="aspect-video bg-black/30 rounded flex items-center justify-center">
-                  <span className="text-foreground/40">Demo Video</span>
+                <h4 className="text-sm font-medium mb-3 text-foreground/90">Demo Video</h4>
+                <div className="aspect-video bg-black/30 rounded overflow-hidden">
+                  <video 
+                    className="w-full h-full object-cover" 
+                    controls 
+                    poster="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                  >
+                    <source src="https://assets.mixkit.co/videos/preview/mixkit-medical-technology-interface-for-heart-analysis-10622-large.mp4" type="video/mp4" />
+                    Your browser does not support HTML5 video.
+                  </video>
                 </div>
               </div>
               
               <div className="glass-card p-6 mt-4">
-                <div className="aspect-square bg-black/30 rounded flex items-center justify-center">
-                  <span className="text-foreground/40">Analysis Image</span>
+                <h4 className="text-sm font-medium mb-3 text-foreground/90">Analysis Image</h4>
+                <div className="aspect-square bg-black/30 rounded overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" 
+                    alt="Glaucoma Analysis" 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>
