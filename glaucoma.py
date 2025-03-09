@@ -1,195 +1,133 @@
-import gradio as gr
-import matplotlib.pyplot as plt
 import numpy as np
-import random
+import pandas as pd
+import matplotlib.pyplot as plt
+from PIL import Image
+import torch
+import torch.nn as nn
+from torchvision import models
+from torchvision import transforms
+import tqdm
+from sklearn import preprocessing
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import os
 
-# Example images paths with hidden assigned risk levels
-example_images = [
-    ("./data/CFPs/31_OS_3.jpg", "high"),
-    ("./data/CFPs/31_OD_3.jpg", "medium"),
-    ("./data/CFPs/140_OD_9.jpg", "low")
-]
 
-risk_parameters = {
-    "high": {
-        "risk_percent": (80, 98),
-        "IOP": (26, 30),
-        "CCT": (460, 500),
-        "Cup-to-Disc Ratio": (0.85, 0.99),
-        "Mean Deviation (MD)": (-12, -7),
-        "RNFL": (60, 75),
-        "Optic Nerve Head Volume (mm³)": (0.9, 1.2)
-    },
-    "medium": {
-        "risk_percent": (40, 70),
-        "IOP": (18, 25),
-        "CCT": (500, 530),
-        "Cup-to-Disc Ratio": (0.65, 0.84),
-        "Mean Deviation (MD)": (-5, -2),
-        "RNFL Thickness (µm)": (76, 90),
-        "Optic Nerve Head Volume (mm³)": (0.6, 0.89)
-    },
-    "low": {
-        "risk_percent": (1, 15),
-        "IOP": (12, 17),
-        "CCT": (531, 580),
-        "Cup-to-Disc Ratio": (0.3, 0.64),
-        "Mean Deviation (MD)": (-1.5, 0),
-        "RNFL Thickness (µm)": (90, 110),
-        "Optic Nerve Head Volume (mm³)": (0.3, 0.59)
-    }
-}
+class Model(nn.Module):
+    def __init__(self):
+        super(Model, self).__init__()
+        self.resnet = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        self.resnet.fc = nn.Sequential(nn.Linear(2048, 128), nn.ReLU(), nn.Linear(128, 59))
 
-def generate_stats(risk_level):
-    params = risk_parameters[risk_level]
-    return {
-        "IOP (mmHg)": random.randint(*params["IOP"]),
-        "CCT (µm)": random.randint(*params["CCT"]),
-        "Cup-to-Disc Ratio": round(random.uniform(*params["Cup-to-Disc Ratio"]), 2),
-        "Mean Deviation (MD)": round(random.uniform(*params.get("Mean Deviation (MD)", (-10, 0))), 2),
-        "RNFL Thickness (µm)": random.randint(*params.get("RNFL", (70, 100))),
-        "Optic Nerve Head Volume (mm³)": round(random.uniform(*params["Optic Nerve Head Volume (mm³)"]), 2)
-    }
+    def forward(self, x):
+        x = self.resnet(x)
+        return x
 
-def analyze_image(img_path):
-    # Determine risk level
-    risk_level = None
-    for example_img, level in example_images:
-        if img_path == example_img:
-            risk_level = level
-            break
-    if risk_level is None:
-        risk_level = random.choice(["high", "medium", "low"])
 
-    # Generate random stats
-    stats = generate_stats(risk_level)
-    risk_percent = round(random.uniform(*risk_parameters[risk_level]["risk_percent"]), 1)
-    gri = (stats["Cup-to-Disc Ratio"] * stats["IOP (mmHg)"]) / stats["RNFL Thickness (µm)"] * 100
-    auc = round(random.uniform(0.89, 0.97), 2)
-    model_confidence = round(random.uniform(85, 97), 1)
+Batch = 8
+Epoch = 50
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    # 1) Clinical Parameters Plot (black background, gray bars)
-    fig, ax = plt.subplots(figsize=(7, 4))
-    params = list(stats.keys())
-    values = list(stats.values())
-    bars = ax.barh(params, values, color='#8c8c8c')
-    ax.bar_label(bars)
-    ax.set_title("Clinical Parameter Analysis", fontsize=14, fontweight='bold')
-    plt.tight_layout()
+data_path = './data/'
+excel_data = pd.read_excel(data_path + 'VF_clinical_info.xlsx', sheet_name=0)
+excel_data = np.array(excel_data)
+ids = excel_data[1:, 2]
+image_transform = transforms.Compose([transforms.ToTensor(), transforms.Resize((224, 224))])  # (432, 432)
+input_format = {0: 'CFPs/', 1: 'ROI images/', 2: 'Annotated Images/'}
+format_index = 0  # 0 for CFPs, adjust accordingly
 
-    # 2) ROC Curve Plot (white background)
-    fig2, ax2 = plt.subplots(figsize=(5,5), facecolor='white')
-    ax2.set_facecolor('white')
-    fpr = np.linspace(0, 1, 100)
-    tpr = fpr ** random.uniform(0.2, 0.8)
-    ax2.plot(fpr, tpr, label=f'AUC = {auc}', color='blue', lw=2)
-    ax2.plot([0,1],[0,1],'--', color='grey')
-    ax2.set_title("Model Performance Metrics", fontsize=12, fontweight='bold')
-    ax2.legend(loc='lower right')
-    ax2.grid(True, alpha=0.2, color='#aaa')
+images = []
+missing_files = []
 
-    # 3) Detailed HTML Report
-    analysis_html = f"""
-    <div style="background: #000; color: #fff; padding: 20px; border-radius: 10px; font-family: 'Segoe UI', sans-serif;">
-      <h3 style="margin-top: 0;">Glaucoma Risk Assessment</h3>
-      <p><strong>Risk Level:</strong> {risk_level.capitalize()}<br/>
-         <strong>Risk Probability:</strong> {risk_percent}%<br/>
-         <strong>Model Confidence:</strong> {model_confidence}%<br/>
-         <strong>GRI Index:</strong> {gri:.2f}</p>
-      
-      <div style="margin-top: 10px; background: #222; padding: 15px; border-radius: 8px;">
-        <h4>Key Performance</h4>
-        <ul style="line-height: 1.8;">
-          <li><strong>AUC:</strong> {auc}</li>
-          <li><strong>Accuracy:</strong> {random.randint(88, 94)}%</li>
-          <li><strong>Sensitivity:</strong> {random.randint(85, 95)}%</li>
-          <li><strong>Specificity:</strong> {random.randint(82, 93)}%</li>
-        </ul>
-      </div>
+# Extract the relevant columns from Excel
+subject_numbers = excel_data[1:, 0]
+laterality = excel_data[1:, 1]
+visit_numbers = excel_data[1:, 6]  # Assuming 'Total Visits' represents visit number; adjust if another column specifies visit explicitly
 
-      <div style="margin-top: 10px; background: #222; padding: 15px; border-radius: 8px;">
-        <h4>Clinical Biomarkers</h4>
-        <p><strong>IOP (mmHg):</strong> {stats['IOP (mmHg)']}</p>
-        <p><strong>CCT (µm):</strong> {stats['CCT (µm)']}</p>
-        <p><strong>Cup-to-Disc Ratio:</strong> {stats['Cup-to-Disc Ratio']}</p>
-        <p><strong>Mean Deviation (MD):</strong> {stats['Mean Deviation (MD)']}</p>
-        <p><strong>RNFL Thickness (µm):</strong> {stats['RNFL Thickness (µm)']}</p>
-        <p><strong>Optic Nerve Head Volume (mm³):</strong> {stats['Optic Nerve Head Volume (mm³)']}</p>
-      </div>
-    </div>
-    """
+for subj_num, lat, visit_num in zip(subject_numbers, laterality, visit_numbers):
+    subj_str = str(subj_num).split('.')[0]
+    lat_str = str(lat).strip()
+    visit_str = str(visit_num).split('.')[0]
 
-    return fig, fig2, analysis_html
+    filename = f"{subj_str}_{lat_str}_{visit_str}.jpg"
+    image_path = os.path.join(data_path, input_format[format_index], filename)
 
-iface = gr.Interface(
-    fn=analyze_image,
-    inputs=gr.Image(type="filepath"),
-    outputs=[
-        gr.Plot(label="Feature Analysis"),
-        gr.Plot(label="Performance Metrics"),
-        gr.HTML(label="Clinical Report")
-    ],
-    examples=[[img] for img, _ in example_images],
-    title="GlaucoGuard: Deep Learning-Driven Automated Glaucoma Diagnosis and Analysis",
-    description="ResNet50-powered clinical assessment system with quantitative biomarkers",
-    css="""
-        body {
-    background: linear-gradient(135deg, #121212, #1e1e1e) !important;
-    color: #eee !important;
-    font-family: 'Poppins', sans-serif;
-}
+    if os.path.exists(image_path):
+        img = Image.open(image_path).convert("RGB")
+        images.append(image_transform(img))
+    else:
+        missing_files.append(image_path)
 
-.gradio-container {
-    background: rgba(30, 30, 30, 0.9) !important;
-    border-radius: 12px;
-    padding: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-}
+if missing_files:
+    print(f"Warning: {len(missing_files)} files not found:")
+    for file in missing_files:
+        print(file)
 
-.gr-button-primary {
-    background: linear-gradient(135deg, #ff4b1f, #ff9068);
-    border: none;
-    border-radius: 10px;
-    color: #fff !important;
-    padding: 12px 18px;
-    font-size: 16px;
-    font-weight: 600;
-    transition: all 0.3s ease-in-out;
-}
+if images:
+    images = torch.stack(images, dim=0)
+else:
+    raise ValueError("No images found. Please check the file paths and naming conventions.")
+images = torch.stack(images, dim=0)
+labels = np.delete(excel_data[1:, 3:], (21, 32), axis=1).astype(np.float64)
 
-.gr-button-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(255, 72, 31, 0.4);
-}
+np.random.seed(0)
+random_indices = np.random.permutation(len(images))
+split_index = int(len(images) * 0.8)
+train_data, train_label = images[random_indices[:split_index]], labels[random_indices[:split_index]]
+test_data, test_label = images[random_indices[split_index:]], labels[random_indices[split_index:]]
 
-h1, h2, h3, h4 {
-    color: #ff9068 !important;
-    border-bottom: none !important;
-}
+scaler = preprocessing.StandardScaler()
+scaler.fit(train_label)
+train_label = scaler.transform(train_label)
+train_label, test_label = torch.Tensor(train_label), torch.Tensor(test_label)
+train_set = torch.utils.data.TensorDataset(train_data, train_label)
+train_loader = torch.utils.data.DataLoader(train_set, batch_size=Batch, shuffle=True)
+val_index = len(test_data)
+val_set = torch.utils.data.TensorDataset(test_data[:val_index], test_label[:val_index])
+val_loader = torch.utils.data.DataLoader(val_set, batch_size=Batch, shuffle=False)
+test_set = torch.utils.data.TensorDataset(test_data[:val_index], test_label[:val_index])
+test_loader = torch.utils.data.DataLoader(test_set, batch_size=Batch, shuffle=False)
 
-.gr-plot {
-    background: #181818 !important;
-    border-radius: 12px !important;
-    padding: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
+model = Model()
+model.to(device)
 
-.mantine-Text-root, .mantine-TextInput-input {
-    color: #ddd !important;
-    background: #222 !important;
-    border-radius: 8px;
-    padding: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
+loss_function = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, eta_min=1e-5, T_max=(len(train_set) // Batch + 1 if len(train_set) % Batch else len(train_set) // Batch) * Epoch)
+loss_list_epoch = []
+for epoch in tqdm.tqdm(range(Epoch)):
+    loss_list_batch = []
+    for data in train_loader:
+        image, label = data[0].to(device), data[1].to(device)
+        pre = model(image)
+        loss = loss_function(pre, label)
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+        optimizer.step()
+        scheduler.step()
+        loss_list_batch.append(loss.data.item() * len(pre) / len(train_set))
+    loss_list_epoch.append(sum(loss_list_batch))
 
-.mantine-TextInput-input:focus {
-    border-color: #ff9068;
-    box-shadow: 0px 0px 8px rgba(255, 144, 104, 0.6);
-}
+plt.figure()
+plt.plot(loss_list_epoch)
+plt.show()
 
-    """
-)
+# load model from the provided checkpoints
+# model.load_state_dict(torch.load('./checkpoints/' + input_format[format_index] + 'model.pt'))
+model.eval()
+test_pre = []
+with torch.no_grad():
+    for data in test_loader:
+        image = data[0].to(device)
+        pre = model(image)
+        test_pre.append(pre)
+test_pre = torch.cat(test_pre)
+test_pre = scaler.inverse_transform(test_pre.cpu().numpy())
+test_pre = np.clip(test_pre, -1, 35)
+rmse = mean_squared_error(test_label[:val_index], test_pre, squared=False)
+mae = mean_absolute_error(test_label[:val_index], test_pre)
+r2 = r2_score(test_label[:val_index], test_pre)
 
-iface.launch(share=True)
+print('Results:', 'RMSE:', (round(rmse, 3)), '\t',
+      'MAE', (round(mae, 3)), '\t',
+      'R2', (round(r2, 3)))
